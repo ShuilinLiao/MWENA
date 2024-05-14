@@ -2,21 +2,20 @@
 import os
 import random
 import copy
+import numpy as np
+
 import torch
 from torch import nn
-import numpy as np
 from torch import optim
 from torch.autograd import Variable
 from torch.functional import F
-# from net import Net1, VNet
-from net import *
-import argparse
-from sklearn.metrics import confusion_matrix
-import warnings
-from sklearn.model_selection import train_test_split
-from collections import Counter
-import pickle
 
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+import warnings
+from collections import Counter
+import argparse
+import pickle
 from net import *
 from utils import *
 from utils2 import *
