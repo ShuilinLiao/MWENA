@@ -330,18 +330,10 @@ def meta_model_update2(meta_model_1,
     v_lambda = vnet_1(cost_v.data)
     w1 = abs((v_lambda - v_lambda.max()) / (v_lambda.max() - v_lambda.min()))
 
-    # l_f_meta_1 = torch.sum(cost_v * w1) + 0.05 * F.l1_loss(meta_model_1.linear.weight,
-    #                                                        target=torch.zeros_like(meta_model_1.linear.weight.detach()),
-    #                                                        size_average=False)
 
     l_f_meta_1 = torch.sum(cost_v * w1) + lmbda * F.l1_loss(meta_model_1.linear.weight,
                                                            target=torch.zeros_like(meta_model_1.linear.weight.detach()),
                                                            size_average=False) + lmbda2 * torch.sum(torch.pow(meta_model_1.linear.weight, 2))
-
-    # l_f_meta_1 = torch.sum(cost_v * w1)
-    # l1_loss = lmbda * torch.sum(torch.abs(meta_model_1.linear.weight))
-    # l2_loss = lmbda2 * torch.sum(torch.pow(meta_model_1.linear.weight, 2))
-    # l_f_meta_1 = l_f_meta_1 + l1_loss + l2_loss
 
     meta_model_1.zero_grad()
     grads = torch.autograd.grad(l_f_meta_1, (meta_model_1.params()), create_graph=True)
@@ -360,7 +352,6 @@ def train_auto_meta3(model_1,
     y_1 = torch.tensor(y_1)
 
     ###########################################step 1#################################
-    # meta_model_1 = MultiLinearRegression1(featureDim, 1)
     meta_model_1 = build_model(featureDim)
     meta_model_1.load_state_dict(model_1.state_dict())
 
@@ -373,17 +364,9 @@ def train_auto_meta3(model_1,
     cost = nn.BCELoss(reduction='none')
     l_g_meta1 = cost(y_g_hat, my_1.to(torch.float32))
 
-    # l_g_meta1 = l_g_meta1 + lmbda* F.l1_loss(meta_model_1.linear.weight,
-    #                                       target=torch.zeros_like(meta_model_1.linear.weight.detach()),
-    #                                       size_average=True)  # + 0.01*(L1Loss(w1,w2) + L1Loss(w1,w3) + L1Loss(w2,w3))
-    
     l_g_meta1 = l_g_meta1 + lmbda* F.l1_loss(meta_model_1.linear.weight,
                                           target=torch.zeros_like(meta_model_1.linear.weight.detach()),
                                           size_average=True)  + lmbda2 * torch.sum(torch.pow(meta_model_1.linear.weight, 2))
-
-    # l1_loss = lmbda * torch.sum(torch.abs(meta_model_1.linear.weight))
-    # l2_loss = lmbda2 * torch.sum(torch.pow(meta_model_1.linear.weight, 2))
-    # l_g_meta1 = l_g_meta1 + l1_loss + l2_loss
 
     optimizer_vnet_1.zero_grad()
     l_g_meta1.sum().backward()
@@ -392,17 +375,9 @@ def train_auto_meta3(model_1,
     ###########################################step 3#################################
     loss_1, w1 = calculate_weight_loss2(model_1, vnet_1, x_1, y_1)
 
-    # loss_1 = loss_1 + lmbda * F.l1_loss(model_1.linear.weight,
-    #                                    target=torch.zeros_like(model_1.linear.weight.detach()),
-    #                                    size_average=False) 
-
     loss_1 = loss_1 + lmbda * F.l1_loss(model_1.linear.weight,
                                        target=torch.zeros_like(model_1.linear.weight.detach()),
                                        size_average=False) + lmbda2 * torch.sum(torch.pow(model_1.linear.weight, 2))
-
-    # l1_loss = lmbda * torch.sum(torch.abs(model_1.linear.weight))
-    # l2_loss = lmbda2 * torch.sum(torch.pow(model_1.linear.weight, 2))
-    # loss_1 = loss_1 + l1_loss + l2_loss
 
     optimizer_model_1.zero_grad()
     loss_1.sum().backward()
@@ -429,15 +404,9 @@ def synthetic_binary_data(w, num_features, num_examples, zero_ratio, sigma, IR, 
 
     np.random.seed(set_seed)
     
-    # 将一部分权重设为0
-    # num_zero_coef = int(zero_ratio * num_features)  # 计算需要设为0的权重个数
-    # zero_indices = np.random.choice(num_features, num_zero_coef, replace=False)
-    # true_w[zero_indices] = 0
-
     x = np.random.normal(0, 1, (2000, num_features))  # 生成特征数据
     x = torch.tensor(x)
 
-    # y = torch.matmul(x.to(torch.float32), torch.tensor(true_w))  # 计算线性模型的预测结果
     y = torch.matmul(x.to(torch.float32), true_w.detach())
     y += sigma * torch.normal(0, 0.5, y.shape)  # 添加高斯噪声
     y = torch.sigmoid(y)
@@ -460,45 +429,6 @@ def synthetic_binary_data(w, num_features, num_examples, zero_ratio, sigma, IR, 
     y_train = y[selected_indices]
 
     return X_train.to(torch.float32), y_train
-
-def synthetic_binary_data_split(w, num_features, num_examples, zero_ratio, sigma, IR, set_seed):
-    true_w = w
-
-    np.random.seed(set_seed)
-    
-    # 将一部分权重设为0
-    # num_zero_coef = int(zero_ratio * num_features)  # 计算需要设为0的权重个数
-    # zero_indices = np.random.choice(num_features, num_zero_coef, replace=False)
-    # true_w[zero_indices] = 0
-
-    x = np.random.normal(0, 1, (500, num_features))  # 生成特征数据
-    x = torch.tensor(x)
-
-    # y = torch.matmul(x.to(torch.float32), torch.tensor(true_w))  # 计算线性模型的预测结果
-    y = torch.matmul(x.to(torch.float32), true_w.detach())
-    y += sigma * torch.normal(0, 0.5, y.shape)  # 添加高斯噪声
-    y = torch.sigmoid(y)
-    y = np.array(y)
-
-    # 将预测结果转换为类别标签
-    y = np.where(y >= 0.5, 1, 0)
-
-    # 0类和1类样本
-    num_ones_need = int(num_examples / (IR + 1))
-    num_zeros_need = num_examples - num_ones_need
-
-    one_indices = np.where(y == 1)[0]
-    selected_one_indices = np.random.choice(one_indices, num_ones_need, replace=False)
-    zero_indices = np.where(y == 0)[0]
-    selected_zero_indices = np.random.choice(zero_indices, num_zeros_need, replace=False)
-
-    selected_indices = np.concatenate((selected_one_indices, selected_zero_indices))
-    x = x[selected_indices]
-    y = y[selected_indices]
-
-    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-
-    return X_train.to(torch.float32), X_test.to(torch.float32), y_train, y_test
 
 def print_eva(y_test, y_test_pred, y_test_pred_proba, item):
     data = {'y_test': y_test, 'y_evl': y_test_pred, 'y_pred_proba': y_test_pred_proba}
@@ -634,15 +564,12 @@ for num in range(nums):
     non_zero_weights = torch.gather(betab, 0, non_zero_indices)
     zero_weights = torch.gather(betab, 0, zero_indices)
 
-    # print(type(betab))
-    # print(betab.shape)
     abs_tensor = torch.abs(betab)
     top_values, top_indices = torch.topk(abs_tensor, k=20)
-    # print(top_indices)
-    # print(top_values)
+
     print(np.sum(top_indices.numpy() < 20))
     print(len(non_zero_weights))
 
-    out_dir = '../result_upload/'
-    pref = 'n' + str(sampleNum) + '_IR' + str(ir) + '_sigma' + str(sigma)
-    w_v_dfb.to_csv(out_dir + pref + '.csv', index=False)
+    # out_dir = '../result_upload/'
+    # pref = 'n' + str(sampleNum) + '_IR' + str(ir) + '_sigma' + str(sigma)
+    # w_v_dfb.to_csv(out_dir + pref + '.csv', index=False)
